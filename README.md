@@ -1,16 +1,7 @@
-# React + Vite
+# ABOUT
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the front-end part of a smart reminder system. The backend part will be added at a later time, and the project will be completed.
 
-Currently, two official plugins are available:
+This system was developed to minimize missed deadlines and maximize productivity by allowing the user to set priority to his/her tasks. The system then uses the set priority and its smart behaviour to select the appropriate time to send alerts to the user. 
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The system also features a historical record of the user's behaviour to determine what time of the day to send alerts, and then the proximity of the task's deadline determines how frequently the user gets the alerts.
