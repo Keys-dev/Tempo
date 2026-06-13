@@ -1,41 +1,36 @@
-import React, { useState } from 'react';
-import { Plus, AlertCircle, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, AlertCircle, CheckCircle2, Clock, TrendingUp, Loader2 } from 'lucide-react';
 import TaskForm from '../components/TaskForm';
 import TaskCard from '../components/TaskCard';
 import StatCard from '../components/StatCard';
+import { api } from '../services/api';
 import '../styles/Dashboard.css';
-
-const MOCK_STATS = {
-  totalTasks: 12,
-  pendingTasks: 7,
-  completedTasks: 4,
-  overdueTasks: 1,
-  completionRate: 0.67,
-};
-
-const MOCK_TASKS = [
-  { id: '1', title: 'Finish project proposal', description: 'Complete the Q2 project proposal for the design team', deadline: new Date(Date.now() + 1000 * 60 * 60 * 3).toISOString(), priority: 'critical', status: 'pending' },
-  { id: '2', title: 'Review pull requests', description: 'Review and merge open PRs before end of day', deadline: new Date(Date.now() + 1000 * 60 * 60 * 6).toISOString(), priority: 'high', status: 'pending' },
-  { id: '3', title: 'Weekly team sync', description: 'Prepare agenda for weekly team meeting', deadline: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), priority: 'medium', status: 'pending' },
-  { id: '4', title: 'Update documentation', description: 'Update API docs to reflect latest changes', deadline: new Date(Date.now() + 1000 * 60 * 60 * 48).toISOString(), priority: 'low', status: 'pending' },
-  { id: '5', title: 'Fix login bug', description: 'Investigate and fix the auth redirect bug on mobile', deadline: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), priority: 'critical', status: 'overdue' },
-  { id: '6', title: 'Deploy staging build', description: 'Deploy latest changes to staging environment', deadline: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), priority: 'high', status: 'completed' },
-];
-
-const MOCK_ORGANISED = {
-  critical: MOCK_TASKS.filter(t => t.priority === 'critical' && t.status !== 'completed'),
-  urgent:   MOCK_TASKS.filter(t => t.priority === 'high' && t.status !== 'completed'),
-  upcoming: MOCK_TASKS.filter(t => t.priority === 'medium' || t.priority === 'low'),
-  completed: MOCK_TASKS.filter(t => t.status === 'completed'),
-};
 
 const Dashboard = () => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-  const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const data = await api.tasks.list();
+      setTasks(data);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+      setError('Failed to load tasks. Please check your connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stats = {
-    ...MOCK_STATS,
     totalTasks: tasks.length,
     completedTasks: tasks.filter(t => t.status === 'completed').length,
     pendingTasks: tasks.filter(t => t.status === 'pending').length,
@@ -49,19 +44,35 @@ const Dashboard = () => {
     completed: tasks.filter(t => t.status === 'completed'),
   };
 
-  const handleTaskCreated = (newTask) => {
-    setTasks(prev => [newTask, ...prev]);
-    setShowTaskForm(false);
+  const handleTaskCreated = async (taskInput) => {
+    try {
+      const newTask = await api.tasks.create(taskInput);
+      setTasks(prev => [newTask, ...prev]);
+      setShowTaskForm(false);
+    } catch (err) {
+      console.error('Error creating task:', err);
+      alert('Failed to create task');
+    }
   };
 
-  const handleStatusChange = (id, status) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+  const handleStatusChange = async (id, status) => {
+    try {
+      const updatedTask = await api.tasks.update(id, { status });
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+    } catch (err) {
+      console.error('Error updating task:', err);
+      alert('Failed to update task status');
+    }
   };
 
-  const renderTaskList = (taskList) =>
-    taskList && taskList.length > 0
+  const renderTaskList = (taskList) => {
+    if (loading) return <div className="loading-state"><Loader2 className="animate-spin" /> Loading tasks...</div>;
+    if (error) return <div className="error-state">{error}</div>;
+    
+    return taskList && taskList.length > 0
       ? taskList.map(task => <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />)
       : <p className="empty-state">No tasks in this category</p>;
+  };
 
   return (
     <div className="dashboard">
@@ -86,7 +97,7 @@ const Dashboard = () => {
         <StatCard title="Pending"         value={stats.pendingTasks}   icon={<Clock size={24} />}         color="blue" />
         <StatCard title="Completed"       value={stats.completedTasks} icon={<CheckCircle2 size={24} />}  color="green" />
         <StatCard title="Overdue"         value={stats.overdueTasks}   icon={<AlertCircle size={24} />}   color="red" />
-        <StatCard title="Completion Rate" value={`${Math.round(stats.completedTasks / stats.totalTasks * 100)}%`} icon={<TrendingUp size={24} />} color="purple" />
+        <StatCard title="Completion Rate" value={`${stats.totalTasks === 0 ? 0 : Math.round(stats.completedTasks / stats.totalTasks * 100)}%`} icon={<TrendingUp size={24} />} color="purple" />
       </div>
 
       <div className="tasks-section">

@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { Menu, X, Clock, History, TrendingUp } from 'lucide-react';
 import '../styles/Navigation.css';
 
-const Navigation = () => {
+const Navigation = ({ onSignOut }) => {
   const [isOpen, setIsOpen] = React.useState(false);
-
+  
   return (
     <nav className="navbar">
       <div className="navbar-container">
@@ -22,6 +22,7 @@ const Navigation = () => {
           <Link to="/" className="nav-link" onClick={() => setIsOpen(false)}>Dashboard</Link>
           <Link to="/history" className="nav-link" onClick={() => setIsOpen(false)}><History size={18} /> History</Link>
           <Link to="/insights" className="nav-link" onClick={() => setIsOpen(false)}><TrendingUp size={18} /> Insights</Link>
+          <button onClick={onSignOut} className="nav-signout-btn">Sign Out</button>
         </div>
       </div>
     </nav>

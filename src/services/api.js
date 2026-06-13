@@ -1,60 +1,77 @@
-const API_BASE = '/api';
+import { supabase } from '../lib/supabase';
 
 export const api = {
   // Tasks
   tasks: {
-    list: () => fetch(`${API_BASE}/tasks`).then(r => r.json()),
-    get: (id) => fetch(`${API_BASE}/tasks/${id}`).then(r => r.json()),
-    create: (data) =>
-      fetch(`${API_BASE}/tasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }).then(r => r.json()),
-    update: (id, data) =>
-      fetch(`${API_BASE}/tasks/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }).then(r => r.json()),
-    delete: (id) =>
-      fetch(`${API_BASE}/tasks/${id}`, { method: 'DELETE' }).then(r => r.json()),
+    list: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('deadline', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    get: async (id) => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*, reminders(*)')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    create: async (taskData) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert([{ ...taskData, user_id: user.id }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+},
+    update: async (id, taskData) => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(taskData)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    delete: async (id) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    },
   },
 
   // Reminders
   reminders: {
-    list: () => fetch(`${API_BASE}/reminders`).then(r => r.json()),
-    getHistory: (taskId) =>
-      fetch(`${API_BASE}/reminders/task/${taskId}`).then(r => r.json()),
-    create: (data) =>
-      fetch(`${API_BASE}/reminders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }).then(r => r.json()),
+    list: async () => {
+      const { data, error } = await supabase.from('reminders').select('*');
+      if (error) throw error;
+      return data;
+    },
+    getHistory: async (taskId) => {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('task_id', taskId);
+      if (error) throw error;
+      return data;
+    },
   },
 
-  // Dashboard
-  dashboard: {
-    getSummary: () => fetch(`${API_BASE}/dashboard/summary`).then(r => r.json()),
-    getOrganizedTasks: () =>
-      fetch(`${API_BASE}/dashboard/organized-tasks`).then(r => r.json()),
-  },
-
-  // Behavioral
-  behavioral: {
-    getAnalysis: () => fetch(`${API_BASE}/behavioral/analyze`).then(r => r.json()),
-    recordInteraction: (data) =>
-      fetch(`${API_BASE}/behavioral/interaction`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }).then(r => r.json()),
-  },
-
-  // Auth
+  // Auth (Boilerplate - will need integration with UI)
   auth: {
-    me: () => fetch(`${API_BASE}/auth/me`).then(r => r.json()),
-    logout: () => fetch(`${API_BASE}/auth/logout`, { method: 'POST' }).then(r => r.json()),
+    signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
+    signUp: (email, password) => supabase.auth.signUp({ email, password }),
+    signOut: () => supabase.auth.signOut(),
+    getUser: () => supabase.auth.getUser(),
   },
 };

@@ -1,17 +1,7 @@
-import React from 'react';
-import { Mail, MessageSquare, Phone, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, MessageSquare, Phone, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
+import { api } from '../services/api';
 import '../styles/ReminderHistory.css';
-
-const MOCK_REMINDERS = [
-  { id: 'r1',  channel: 'email', escalationLevel: 1, sentAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),           status: 'sent' },
-  { id: 'r2',  channel: 'sms',   escalationLevel: 2, sentAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),           status: 'sent' },
-  { id: 'r3',  channel: 'push',  escalationLevel: 1, sentAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),       status: 'dismissed' },
-  { id: 'r4',  channel: 'email', escalationLevel: 1, sentAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),       status: 'sent' },
-  { id: 'r5',  channel: 'sms',   escalationLevel: 3, sentAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),      status: 'failed' },
-  { id: 'r6',  channel: 'email', escalationLevel: 2, sentAt: new Date(Date.now() - 1000 * 60 * 60 * 27).toISOString(),      status: 'sent' },
-  { id: 'r7',  channel: 'push',  escalationLevel: 1, sentAt: new Date(Date.now() - 1000 * 60 * 60 * 50).toISOString(),      status: 'sent' },
-  { id: 'r8',  channel: 'email', escalationLevel: 1, sentAt: new Date(Date.now() - 1000 * 60 * 60 * 51).toISOString(),      status: 'dismissed' },
-];
 
 const getChannelIcon = (channel) => {
   switch (channel) {
@@ -31,8 +21,30 @@ const getStatusIcon = (status) => {
 };
 
 const ReminderHistory = () => {
-  const groupedByDate = MOCK_REMINDERS.reduce((acc, reminder) => {
-    const date = new Date(reminder.sentAt).toLocaleDateString();
+  const [reminders, setReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.reminders.list();
+      setReminders(data);
+    } catch (err) {
+      console.error('Error fetching history:', err);
+      setError('Failed to load reminder history. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const groupedByDate = reminders.reduce((acc, reminder) => {
+    const date = new Date(reminder.sent_at || reminder.sentAt).toLocaleDateString();
     if (!acc[date]) acc[date] = [];
     acc[date].push(reminder);
     return acc;
@@ -46,32 +58,40 @@ const ReminderHistory = () => {
       </div>
 
       <div className="history-container">
-        {Object.entries(groupedByDate).map(([date, dayReminders]) => (
-          <div key={date} className="history-day">
-            <h3 className="day-header">{date}</h3>
-            <div className="reminders-list">
-              {dayReminders.map(reminder => (
-                <div key={reminder.id} className="reminder-item">
-                  <div className="reminder-icons">
-                    {getChannelIcon(reminder.channel)}
-                    {getStatusIcon(reminder.status)}
+        {error ? (
+          <p className="error-state">{error}</p>
+        ) : loading ? (
+          <div className="loading-state"><Loader2 className="animate-spin" /> Fetching history...</div>
+        ) : Object.keys(groupedByDate).length > 0 ? (
+          Object.entries(groupedByDate).map(([date, dayReminders]) => (
+            <div key={date} className="history-day">
+              <h3 className="day-header">{date}</h3>
+              <div className="reminders-list">
+                {dayReminders.map(reminder => (
+                  <div key={reminder.id} className="reminder-item">
+                    <div className="reminder-icons">
+                      {getChannelIcon(reminder.channel)}
+                      {getStatusIcon(reminder.status)}
+                    </div>
+                    <div className="reminder-info">
+                      <p className="reminder-channel">
+                        {reminder.channel.charAt(0).toUpperCase() + reminder.channel.slice(1)} Reminder
+                      </p>
+                      <p className="reminder-meta">
+                        Escalation Level: {reminder.escalation_level || reminder.escalationLevel} • Status: {reminder.status}
+                      </p>
+                    </div>
+                    <div className="reminder-time">
+                      {new Date(reminder.sent_at || reminder.sentAt).toLocaleTimeString()}
+                    </div>
                   </div>
-                  <div className="reminder-info">
-                    <p className="reminder-channel">
-                      {reminder.channel.charAt(0).toUpperCase() + reminder.channel.slice(1)} Reminder
-                    </p>
-                    <p className="reminder-meta">
-                      Escalation Level: {reminder.escalationLevel} • Status: {reminder.status}
-                    </p>
-                  </div>
-                  <div className="reminder-time">
-                    {new Date(reminder.sentAt).toLocaleTimeString()}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="empty-state">No reminders found in your history.</p>
+        )}
       </div>
     </div>
   );

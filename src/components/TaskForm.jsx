@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import '../styles/TaskForm.css';
 
-let nextId = 100;
-
 const TaskForm = ({ onClose, onTaskCreated }) => {
   const [formData, setFormData] = useState({ title: '', description: '', deadline: '', priority: 'medium' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   const handleChange = (e) => {
@@ -13,23 +12,28 @@ const TaskForm = ({ onClose, onTaskCreated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     if (!formData.title.trim()) { setError('Task title is required'); return; }
     if (!formData.deadline)     { setError('Deadline is required'); return; }
 
-    const newTask = {
-      id: String(nextId++),
-      title: formData.title.trim(),
-      description: formData.description.trim() || '',
-      deadline: new Date(formData.deadline).toISOString(),
-      priority: formData.priority,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      setIsSubmitting(true);
+      const taskInput = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || '',
+        deadline: new Date(formData.deadline).toISOString(),
+        priority: formData.priority,
+        status: 'pending',
+      };
 
-    onTaskCreated(newTask);
+      await onTaskCreated(taskInput);
+    } catch (err) {
+      setError('An error occurred while creating the task.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -72,8 +76,10 @@ const TaskForm = ({ onClose, onTaskCreated }) => {
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn-primary">Create Task</button>
-            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Task'}
+            </button>
+            <button type="button" onClick={onClose} className="btn-secondary" disabled={isSubmitting}>Cancel</button>
           </div>
         </form>
       </div>
