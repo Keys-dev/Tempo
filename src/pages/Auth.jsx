@@ -35,7 +35,7 @@ const Auth = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Tempotask</h1>
+          <h1>Tempo</h1>
           <p>{mode === 'signin' ? 'Sign in to your account' : 'Create a new account'}</p>
         </div>
 
